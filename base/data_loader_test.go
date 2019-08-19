@@ -31,7 +31,7 @@ func TestGetDataLoader(t *testing.T) {
 
 	var model []GetDataLoaderModel
 
-	loader, e := NewDataLoader("excel", &model, dataChan, true,
+	loader, e := NewDataLoader("excel", &model, true,
 		func(item interface{}) bool {
 			tagsModel := item.(*GetDataLoaderModel)
 			return tagsModel.F4 <= 3
@@ -46,7 +46,7 @@ func TestGetDataLoader(t *testing.T) {
 		t.Error(e)
 	}
 
-	e = loader.LoadData()
+	e = loader.LoadData(dataChan)
 	if e != nil {
 		t.Error(e)
 	}

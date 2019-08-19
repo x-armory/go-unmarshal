@@ -18,10 +18,9 @@ type DataLoader struct {
 	BaseTags       *map[int]*FieldTag
 
 	// FetchDataFunc返回chan，每个数据表示一个item数据
-	itemValueChan ItemValueChan
-	writeData     bool
-	itemCache     reflect.Value
-	filters       []ItemFilter
+	writeData bool
+	itemCache reflect.Value
+	filters   []ItemFilter
 }
 
 // 每个map表示一个item数据，key表示field index，value表示内容字符串，
@@ -39,10 +38,10 @@ type ItemFilter func(item interface{}) bool
 // param writeData，为true则将每个元素放入cache并写入data指针，否则不缓存也不写入data；
 // param filters，处理每个元素，如果任一返回false，中断处理，不论data元素是不是地址类型，filter入参总是*Model指针；
 // Tips 将cacheAllItems设为false，并通过filter处理每个元素，适合用来处理超大列表
-func NewDataLoader(tagName string, data interface{}, itemValueChan ItemValueChan, writeData bool, itemFilter ...ItemFilter) (*DataLoader, error) {
+func NewDataLoader(tagName string, data interface{}, writeData bool, itemFilter ...ItemFilter) (*DataLoader, error) {
 	// 校验非空
-	if data == nil || itemValueChan == nil {
-		return nil, errors.New("bad parameters")
+	if data == nil {
+		return nil, errors.New("data can not be nil")
 	}
 
 	// 校验data类型
@@ -91,16 +90,15 @@ func NewDataLoader(tagName string, data interface{}, itemValueChan ItemValueChan
 		ItemIsPtr:      itemIsPtr,
 		ItemStructType: itemStructType,
 		BaseTags:       baseTags,
-		itemValueChan:  itemValueChan,
 		writeData:      writeData,
 		itemCache:      cache,
 		filters:        itemFilter,
 	}, nil
 }
 
-func (i *DataLoader) LoadData() error {
+func (i *DataLoader) LoadData(itemValueChan ItemValueChan) error {
 loadLoop:
-	for itemData := range i.itemValueChan {
+	for itemData := range itemValueChan {
 		if _, ok := (*itemData)[-1]; ok {
 			break loadLoop
 		}
@@ -128,7 +126,15 @@ loadLoop:
 
 		}
 	}
-	i.done()
+
+	if !i.writeData {
+		return nil
+	}
+	if i.DataIsSlice {
+		i.Target.Set(i.itemCache)
+	} else if i.itemCache.Len() > 0 {
+		i.Target.Set(i.itemCache.Index(0))
+	}
 	return nil
 }
 
@@ -156,16 +162,5 @@ func (i *DataLoader) buildItemValue(itemData ItemAllFieldsValue) (*reflect.Value
 		return &value, nil
 	} else {
 		return nil, nil
-	}
-}
-
-func (i *DataLoader) done() {
-	if !i.writeData {
-		return
-	}
-	if i.DataIsSlice {
-		i.Target.Set(i.itemCache)
-	} else if i.itemCache.Len() > 0 {
-		i.Target.Set(i.itemCache.Index(0))
 	}
 }
