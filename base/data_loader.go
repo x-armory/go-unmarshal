@@ -17,6 +17,18 @@ type DataLoader struct {
 	filters   []ItemFilter
 }
 
+func NewDataLoader(v interface{}, writeData bool, filters ...ItemFilter) (*DataLoader, error) {
+	info, e := GetDataInfo(v)
+	if e != nil {
+		return nil, e
+	}
+	return &DataLoader{
+		info,
+		writeData,
+		filters,
+	}, nil
+}
+
 // 每个map表示一个item数据，key表示field index，value表示内容字符串，
 // 由FieldUnmarshalTag负责解析value并生成元素对象，
 // key包含-1表示迭代结束。
