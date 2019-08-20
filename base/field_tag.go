@@ -10,6 +10,7 @@ import (
 	"time"
 )
 
+var posSchemaFindReg = regexp.MustCompile("^(\\w+)[:]//(.+)")
 var posPatternFindReg = regexp.MustCompile(" +pattern='([^']+)'")
 var posFormatFindReg = regexp.MustCompile(" +format='([^']+)'")
 var posTimezoneFindReg = regexp.MustCompile(" +timezone='([^']+)'")
@@ -18,6 +19,7 @@ type FieldTag struct {
 	Id        int            //field index
 	Name      string         //field name
 	FieldType reflect.Type   //
+	Schema    string         // zip | xls | xlsx | xpath | csv
 	Path      string         //position expression; e.g. sheet[x:x]/row[3:x]/col[3]
 	Pattern   *regexp.Regexp //find value
 	Format    string         //format value, only for time
@@ -31,6 +33,7 @@ func GetFieldTags(T reflect.Type, tag string) (*map[int]*FieldTag, error) {
 		t = t.Elem()
 	}
 	fieldNum := t.NumField()
+	var lastProtocol = ""
 	for i := 0; i < fieldNum; i++ {
 		f := t.Field(i)
 		posConfig, ok := f.Tag.Lookup(tag)
@@ -38,6 +41,18 @@ func GetFieldTags(T reflect.Type, tag string) (*map[int]*FieldTag, error) {
 			continue
 		}
 		pos := strings.TrimSpace(posConfig)
+		finds := posSchemaFindReg.FindStringSubmatch(pos)
+		if len(finds) != 3 {
+			return nil, errors.New("bad xm tag " + pos)
+		}
+		schema := finds[1]
+		if lastProtocol == "" {
+			lastProtocol = schema
+		} else if lastProtocol != schema {
+			return nil, errors.New(fmt.Sprintf("multiple schemas not supported, %s, %s ", lastProtocol, schema))
+		}
+
+		pos = finds[2]
 		pos, patternStr := splitPosConfig(pos, posPatternFindReg, "")
 		pos, formatStr := splitPosConfig(pos, posFormatFindReg, "")
 		pos, timezoneStr := splitPosConfig(pos, posTimezoneFindReg, "Asia/Shanghai")
@@ -55,6 +70,7 @@ func GetFieldTags(T reflect.Type, tag string) (*map[int]*FieldTag, error) {
 				i,
 				f.Name,
 				f.Type,
+				schema,
 				pos,
 				pattern,
 				formatStr,
