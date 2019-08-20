@@ -130,9 +130,8 @@ func (tag *FieldTag) Parse(str string) (reflect.Value, error) {
 		} else if isTimePtr {
 			return reflect.ValueOf(&t), err
 		}
-
 	}
-	return reflect.Value{}, nil
+	return reflect.Value{}, errors.New("filed type not support " + tag.FieldType.Name())
 }
 
 func splitPosConfig(str string, pattern *regexp.Regexp, defaultV string) (string, string) {
