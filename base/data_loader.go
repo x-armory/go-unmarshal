@@ -17,13 +17,17 @@ type DataLoader struct {
 	filters   []ItemFilter
 }
 
-func NewDataLoader(v interface{}, writeData bool, filters ...ItemFilter) (*DataLoader, error) {
-	info, e := GetDataInfo(v)
-	if e != nil {
-		return nil, e
+// 如果dataInfo为空，尝试从v获取info
+func NewDataLoader(dataInfo *DataInfo, v interface{}, writeData bool, filters ...ItemFilter) (*DataLoader, error) {
+	if dataInfo == nil {
+		info, e := GetDataInfo(v)
+		if e != nil {
+			return nil, e
+		}
+		dataInfo = info
 	}
 	return &DataLoader{
-		info,
+		dataInfo,
 		writeData,
 		filters,
 	}, nil

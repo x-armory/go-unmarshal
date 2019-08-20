@@ -30,7 +30,7 @@ func TestGetDataLoader(t *testing.T) {
 	}()
 
 	var model []GetDataLoaderModel
-	loader, e := NewDataLoader(&model, true,
+	loader, e := NewDataLoader(nil, &model, true,
 		func(item interface{}) bool {
 			tagsModel := item.(*GetDataLoaderModel)
 			return tagsModel.F4 <= 3
