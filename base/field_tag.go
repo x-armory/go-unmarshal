@@ -82,6 +82,9 @@ func GetFieldTags(T reflect.Type, tag string) (*map[int]*FieldTag, error) {
 				location,
 			}
 	}
+	if len(result) == 0 {
+		return nil, errors.New("xm tag not found")
+	}
 	return &result, nil
 }
 

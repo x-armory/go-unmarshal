@@ -2,7 +2,6 @@ package base
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 )
 
@@ -52,9 +51,6 @@ func GetDataInfo(data interface{}) (*DataInfo, error) {
 		return nil, e
 	} else {
 		baseTags = tag
-	}
-	if len(*baseTags) == 0 {
-		return nil, errors.New(fmt.Sprintf("%s tag not found", "xm"))
 	}
 
 	return &DataInfo{
