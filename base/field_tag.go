@@ -12,18 +12,20 @@ import (
 
 var posSchemaFindReg = regexp.MustCompile("^(\\w+)[:]//(.+)")
 var posPatternFindReg = regexp.MustCompile(" +pattern='([^']+)'")
+var posPatternIndexFindReg = regexp.MustCompile(" +patternIdx='([^']+)'")
 var posFormatFindReg = regexp.MustCompile(" +format='([^']+)'")
 var posTimezoneFindReg = regexp.MustCompile(" +timezone='([^']+)'")
 
 type FieldTag struct {
-	Id        int            //field index
-	Name      string         //field name
-	FieldType reflect.Type   //
-	Schema    string         // zip | xls | xlsx | xpath | csv
-	Path      string         //position expression; e.g. sheet[x:x]/row[3:x]/col[3]
-	Pattern   *regexp.Regexp //find value
-	Format    string         //format value, only for time
-	Timezone  *time.Location //default +8, only for time
+	Id         int            //field index
+	Name       string         //field name
+	FieldType  reflect.Type   //
+	Schema     string         // zip | xls | xlsx | xpath | csv
+	Path       string         //position expression; e.g. sheet[x:x]/row[3:x]/col[3]
+	Pattern    *regexp.Regexp //find value
+	PatternIdx int            //find value
+	Format     string         //format value, only for time
+	Timezone   *time.Location //default +8, only for time
 }
 
 func GetFieldTags(T reflect.Type, tag string) (*map[int]*FieldTag, error) {
@@ -54,6 +56,7 @@ func GetFieldTags(T reflect.Type, tag string) (*map[int]*FieldTag, error) {
 
 		pos = finds[2]
 		pos, patternStr := splitPosConfig(pos, posPatternFindReg, "")
+		pos, patternIdxStr := splitPosConfig(pos, posPatternIndexFindReg, "")
 		pos, formatStr := splitPosConfig(pos, posFormatFindReg, "")
 		pos, timezoneStr := splitPosConfig(pos, posTimezoneFindReg, "Asia/Shanghai")
 		location, err := time.LoadLocation(timezoneStr)
@@ -64,6 +67,7 @@ func GetFieldTags(T reflect.Type, tag string) (*map[int]*FieldTag, error) {
 		if patternStr != "" {
 			pattern = regexp.MustCompile(patternStr)
 		}
+		patternIdx, _ := strconv.Atoi(patternIdxStr)
 
 		result[i] =
 			&FieldTag{
@@ -73,6 +77,7 @@ func GetFieldTags(T reflect.Type, tag string) (*map[int]*FieldTag, error) {
 				schema,
 				pos,
 				pattern,
+				patternIdx,
 				formatStr,
 				location,
 			}
