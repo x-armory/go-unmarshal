@@ -9,11 +9,11 @@ import (
 )
 
 type GetExcelTagsModel struct {
-	F1 string `xm:"xls://sheet[5:]/row[3:x]/col[3] pattern='\\d{4}-\\d{2}-\\d{2}' format='2006-01-02' timezone='Asia/Shanghai'"`
-	F2 string `xm:"xls://sheet[6:9]/row[:]/col[3] pattern='\\d{4}-\\d{2}-\\d{2}'  format='2006-01-02' timezone='Asia/Shanghai'"`
-	F3 string `xm:"xls://sheet[:12]/row[:8]/col[3] pattern='\\d{4}-\\d{2}-\\d{2}' format='2006-01-02' timezone='Asia/Shanghai'"`
-	F4 string `xm:"xls://sheet[5]/row[10:8]/col[3] pattern='\\d{4}-\\d{2}-\\d{2}' format='2006-01-02' timezone='Asia/Shanghai'"`
-	F5 string `xm:"xls://sheet[]/row[10:8]/col[6] pattern='\\d{4}-\\d{2}-\\d{2}'  format='2006-01-02' timezone='Asia/Shanghai'"`
+	F1 string `xm:"excel://sheet[5:]/row[3:x]/col[3] pattern='\\d{4}-\\d{2}-\\d{2}' format='2006-01-02' timezone='Asia/Shanghai'"`
+	F2 string `xm:"excel://sheet[6:9]/row[:]/col[3] pattern='\\d{4}-\\d{2}-\\d{2}'  format='2006-01-02' timezone='Asia/Shanghai'"`
+	F3 string `xm:"excel://sheet[:12]/row[:8]/col[3] pattern='\\d{4}-\\d{2}-\\d{2}' format='2006-01-02' timezone='Asia/Shanghai'"`
+	F4 string `xm:"excel://sheet[5]/row[10:8]/col[3] pattern='\\d{4}-\\d{2}-\\d{2}' format='2006-01-02' timezone='Asia/Shanghai'"`
+	F5 string `xm:"excel://sheet[]/row[10:8]/col[6] pattern='\\d{4}-\\d{2}-\\d{2}'  format='2006-01-02' timezone='Asia/Shanghai'"`
 }
 
 func TestGetExcelTags(t *testing.T) {
