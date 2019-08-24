@@ -35,7 +35,7 @@ func GetFieldTags(T reflect.Type, tag string) (*map[int]*FieldTag, error) {
 		t = t.Elem()
 	}
 	fieldNum := t.NumField()
-	var lastProtocol = ""
+	//var lastProtocol = ""
 	for i := 0; i < fieldNum; i++ {
 		f := t.Field(i)
 		posConfig, ok := f.Tag.Lookup(tag)
@@ -48,11 +48,11 @@ func GetFieldTags(T reflect.Type, tag string) (*map[int]*FieldTag, error) {
 			return nil, errors.New("bad xm tag " + pos)
 		}
 		schema := finds[1]
-		if lastProtocol == "" {
-			lastProtocol = schema
-		} else if lastProtocol != schema {
-			return nil, errors.New(fmt.Sprintf("multiple schemas not supported, %s, %s ", lastProtocol, schema))
-		}
+		//if lastProtocol == "" {
+		//	lastProtocol = schema
+		//} else if lastProtocol != schema {
+		//	return nil, errors.New(fmt.Sprintf("multiple schemas not supported, %s, %s ", lastProtocol, schema))
+		//}
 
 		pos = finds[2]
 		pos, patternStr := splitPosConfig(pos, posPatternFindReg, "")
