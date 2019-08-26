@@ -50,7 +50,7 @@ func GetExcelTags(baseTags *map[int]*base.FieldTag) (map[int]*FieldTag, error) {
 		setRangeIndex(&excelTag.RowStart, &excelTag.RowEnd, index[4], index[5] != "", index[6], DefaultMaxRow)
 		excelTag.Col, _ = strconv.Atoi(index[7])
 		result[tag.Id] = excelTag
-		if i == 0 {
+		if i == 1 {
 			allRange.SheetStart = excelTag.SheetStart
 			allRange.SheetEnd = excelTag.SheetEnd
 			allRange.RowStart = excelTag.RowStart
