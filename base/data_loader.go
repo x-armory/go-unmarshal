@@ -14,7 +14,7 @@ type DataLoader struct {
 	*DataInfo
 	// FetchDataFunc返回chan，每个数据表示一个item数据
 	writeData bool
-	filters   []ItemFilter
+	filters   ItemFilters
 }
 
 // 如果dataInfo为空，尝试从v获取info
@@ -38,9 +38,30 @@ func NewDataLoader(dataInfo *DataInfo, v interface{}, writeData bool, filters ..
 // key包含-1表示迭代结束。
 type ItemAllFieldsValue *map[int]string
 type ItemValueChan chan ItemAllFieldsValue
+type ItemFilter func(item interface{}) FlowControl
+type ItemFilters []ItemFilter
 
-// 处理每个元素，如果任意一个返回false，中断处理
-type ItemFilter func(item interface{}) bool
+func (filters ItemFilters) Filter(item interface{}) FlowControl {
+	for _, filter := range filters {
+		control := filter(item)
+		if control != Forward {
+			return control
+		}
+	}
+	return Forward
+}
+
+// 用于控制列表处理过程
+type FlowControl int
+
+const (
+	// go on processing
+	Forward FlowControl = 1 + iota
+	// continue loop
+	Continue
+	// break loop
+	Break
+)
 
 func (i *DataLoader) LoadData(itemValueChan ItemValueChan) error {
 	// 元素缓存，不论目标是单个对象还是数组，统一用数组缓存，方便统一处理
@@ -58,7 +79,11 @@ loadLoop:
 			return err
 		}
 		if itemPtr == nil {
-			break loadLoop
+			flow := i.filters.Filter(nil)
+			if flow == Break {
+				break loadLoop
+			}
+			continue loadLoop
 		}
 		if i.writeData {
 			if i.ItemIsPtr {
@@ -67,10 +92,11 @@ loadLoop:
 				cache = reflect.Append(cache, reflect.Indirect(*itemPtr))
 			}
 		}
-		for _, f := range i.filters {
-			if !f(itemPtr.Interface()) {
-				break loadLoop
-			}
+		flow := i.filters.Filter(itemPtr.Interface())
+		if flow == Break {
+			break loadLoop
+		} else if flow == Continue {
+			continue loadLoop
 		}
 		if !i.DataIsSlice {
 			break loadLoop
@@ -102,11 +128,13 @@ func (i *DataLoader) buildItemValue(itemData ItemAllFieldsValue) (*reflect.Value
 		if !ok {
 			return nil, errors.New(fmt.Sprintf("bad field index %d for type %s", fieldIndex, i.ItemStructType.Name()))
 		}
-		if v, err := fieldTag.Parse(fieldValueString); err != nil {
-			return nil, err
-		} else if v.IsValid() {
-			valueTarget.Field(fieldIndex).Set(v)
-			hasFieldValue = true
+		if fieldValueString != "" {
+			if v, err := fieldTag.Parse(fieldValueString); err != nil {
+				return nil, err
+			} else if v.IsValid() {
+				valueTarget.Field(fieldIndex).Set(v)
+				hasFieldValue = true
+			}
 		}
 	}
 	if hasFieldValue {

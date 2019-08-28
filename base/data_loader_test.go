@@ -31,15 +31,19 @@ func TestGetDataLoader(t *testing.T) {
 
 	var model []GetDataLoaderModel
 	loader, e := NewDataLoader(nil, &model, true,
-		func(item interface{}) bool {
+		func(item interface{}) FlowControl {
 			tagsModel := item.(*GetDataLoaderModel)
-			return tagsModel.F4 <= 3
+			if tagsModel.F4 <= 3 {
+				return Forward
+			} else {
+				return Break
+			}
 		},
-		func(item interface{}) bool {
+		func(item interface{}) FlowControl {
 			if i, ok := item.(*GetDataLoaderModel); ok {
 				fmt.Printf("Got an item : %+v\n", i)
 			}
-			return true
+			return Forward
 		})
 	if e != nil {
 		t.Error(e)
