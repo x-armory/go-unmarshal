@@ -26,10 +26,10 @@ type FieldTag struct {
 }
 
 // 解析base.FieldTag.Path中的所有变量取值范围，用于遍历提取数据
-// tag示例: xm:"xls://sheet[10:20]/row[3:10]/col[3] pattern='\d{4}-\d{2}-\d{2}' format='2006-01-02' timezone='Asia/Shanghai'"
-// tag示例: xm:"xls://sheet[]/row[3:]/col[3] pattern='\d{4}-\d{2}-\d{2}' format='2006-01-02' timezone='Asia/Shanghai'"
-// tag示例: xm:"xls://sheet[]/row[:4]/col[3]"
-// tag示例: xm:"xls://sheet[0]/row[]/col[3]"
+// tag示例: xm:"excel://sheet[10:20]/row[3:10]/col[3] pattern='\d{4}-\d{2}-\d{2}' format='2006-01-02' timezone='Asia/Shanghai'"
+// tag示例: xm:"excel://sheet[]/row[3:]/col[3] pattern='\d{4}-\d{2}-\d{2}' format='2006-01-02' timezone='Asia/Shanghai'"
+// tag示例: xm:"excel://sheet[]/row[:4]/col[3]"
+// tag示例: xm:"excel://sheet[0]/row[]/col[3]"
 // 其中sheet/row下标变量格式为[n:m]或者[n]，n或m为数字是表示常量，非数字表示变量，变量出现在左侧表示(0..x)，出现在右侧表示(x..无穷)，没有冒号表示(0..无穷)
 // col下标必须是常量
 // 变量默认范围为[0-9999]，可以指定其他值
