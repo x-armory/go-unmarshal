@@ -1,6 +1,7 @@
 package excel
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/x-armory/go-unmarshal/base"
@@ -21,24 +22,17 @@ func TestGetExcelTags(t *testing.T) {
 	info, err := base.GetDataInfo(&m)
 	assert.NoError(t, err)
 
-	tag, err := GetExcelTags(info.BaseTags)
-	assert.NoError(t, err)
-	i := -1
-	for true {
-		if v, ok := tag[i]; ok {
-			fmt.Printf("%v\t%+v\n\t%+v\n\n", i, v, v.FieldTag)
-		} else {
-			break
-		}
-		i++
-	}
+	excelTags := GetExcelTags(&info.BaseTags)
+
+	bts, _ := json.MarshalIndent(excelTags, "", "    ")
+	println(string(bts))
 }
 
 func TestPosSheetIndexFindReg(t *testing.T) {
-	printPosIndex(posIndexFindReg, "sheet[2]/row[3]/col[5]")
-	posIndex := printPosIndex(posIndexFindReg, "sheet[]/row[3]/col[5]")
+	printPosIndex(FindPathReg, "sheet[2]/row[3]/col[5]")
+	posIndex := printPosIndex(FindPathReg, "sheet[]/row[3]/col[5]")
 	println(len(posIndex))
-	index := printPosIndex(posIndexFindReg, "sheet[2:6]/row[3:3]/col[5]")
+	index := printPosIndex(FindPathReg, "sheet[2:6]/row[3:3]/col[5]")
 	println("sheet", index[1], "-", index[3])
 	println("row", index[4], "-", index[6])
 	println("col", index[7])
@@ -51,4 +45,15 @@ func printPosIndex(reg *regexp.Regexp, str string) []string {
 		fmt.Printf("%d(%s)\n", i, m)
 	}
 	return submatch
+}
+
+func TestGetVar(t *testing.T) {
+	pathFilled := "sheet[5]/row[3]/col[3]"
+	sheet, row, col, _ := GetVar(pathFilled)
+	println(sheet, row, col)
+}
+
+func TestFindReg(t *testing.T) {
+	path := "sheet[]/row[]/col[0]"
+	println(FindPathReg.MatchString(path))
 }

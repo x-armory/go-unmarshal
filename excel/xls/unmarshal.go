@@ -1,69 +1,102 @@
 package xls
 
 import (
-	"bytes"
-	"github.com/extrame/xls"
+	"errors"
+	"fmt"
+	"github.com/shakinm/xlsReader/xls"
 	"github.com/x-armory/go-unmarshal/base"
 	"github.com/x-armory/go-unmarshal/excel"
 	"io"
-	"io/ioutil"
+	"math/rand"
+	"os"
+	"path"
 )
 
-func GetWorkBook(r io.Reader, charset string) (*xls.WorkBook, error) {
-	bs, e := ioutil.ReadAll(r)
-	if e != nil {
-		return nil, e
-	}
-	return xls.OpenReader(bytes.NewReader(bs), charset)
+// xls格式excel反序列化；
+// 支持的注释格式包括：
+// xm:"excel:sheet[1:2]/row[1:30]/col[1]"；
+// xm:"excel:sheet[1:2]/row[1:]/col[1]"；
+// xm:"excel:sheet[1:2]/row[:30]/col[1]"；
+// xm:"excel:sheet[1:2]/row[:]/col[1]"；
+// 其中sheet、row和col下标从0开始；
+// 下标缺省最小值为0，缺省最大值为999999
+// 按sheet->row->col顺序嵌套循环读取数据；
+// 默认遇到空行退出循环
+// data数据类型支持：*Obj *[]Obj *[]*Obj；
+type Unmarshaler struct {
+	Charset string
+	base.DataLoader
 }
 
-// data support *Obj *[]Obj *[]*Obj
-func Unmarshal(doc *xls.WorkBook, data interface{}, writeDate bool, filters ...base.ItemFilter) error {
-	loader, err := base.NewDataLoader(nil, data, writeDate, filters...)
-	if err != nil {
-		return err
-	}
-	var dataChan = make(base.ItemValueChan)
-	// fetch data
-	go func() {
-		tags, e := excel.GetExcelTags(loader.BaseTags)
-		if e != nil {
-			err = e
-			return
-		}
-		allRange := tags[-1]
-		delete(tags, -1)
-		for sheet := allRange.SheetStart; sheet <= allRange.SheetEnd && sheet < doc.NumSheets(); sheet++ {
-			var sheetDoc = doc.GetSheet(sheet)
-			var sheetMaxRow = sheetDoc.MaxRow
-			var sheetMaxRowInt = int(sheetMaxRow)
-			for row := allRange.RowStart; true; row++ {
-				if !(row <= allRange.RowEnd && row <= sheetMaxRowInt) {
-					break
-				}
-				var rowDoc = sheetDoc.Row(row)
-				var itemValues = map[int]string{}
-				for field, fieldTag := range tags {
-					if field < rowDoc.FirstCol() || field > rowDoc.LastCol() {
-						itemValues[fieldTag.Id] = ""
-					} else {
-						itemValues[fieldTag.Id] = rowDoc.Col(fieldTag.Col)
-					}
-				}
-				dataChan <- &itemValues
-				if !loader.DataIsSlice {
-					return
-				}
-			}
-		}
-		println("END")
-	}()
-	e := loader.LoadData(dataChan)
+func (m *Unmarshaler) Unmarshal(r io.Reader, data interface{}) error {
+	// open excel doc
+	doc, e := GetDoc(r, m.Charset)
 	if e != nil {
 		return e
 	}
-	if err != nil {
-		return err
+	// setup
+	m.DataLoader.Data = data
+	// 固定变量嵌套循环顺序
+	m.VarOrder = []string{"sheet", "row", "col"}
+	if m.ExitNoDataTimes <= 0 || m.ExitNoDataTimes > 10 {
+		m.ExitNoDataTimes = 3
 	}
-	return nil
+	if m.ReadValueFunc == nil {
+		m.ReadValueFunc = make(map[string]base.FieldTagReadValueFunc)
+	}
+	m.ReadValueFunc["excel"] = func(fieldTag *base.FieldTag, vars *base.Vars) (v string, err error) {
+		return GetValue(doc, fieldTag.PathFilled)
+	}
+	// load data
+	return m.Load()
+}
+
+func GetDoc(r io.Reader, charset string) (*xls.Workbook, error) {
+	dir := path.Join(os.TempDir(), fmt.Sprintf("xarmory/go-unmarshal/xls/%d", rand.Int63()))
+	err := os.MkdirAll(dir, 0700)
+	if err != nil {
+		return nil, err
+	}
+	file := path.Join(dir, "tmp")
+	tmp, err := os.Create(file)
+	if err != nil {
+		return nil, err
+	}
+	_, err = io.Copy(tmp, r)
+	if err != nil {
+		return nil, err
+	}
+
+	workbook, err := xls.OpenFile(file)
+	if err != nil {
+		return nil, err
+	}
+	return &workbook, nil
+}
+
+func GetValue(doc *xls.Workbook, path string) (s string, err error) {
+	sheet, row, col, err := excel.GetVar(path)
+	if err != nil {
+		return "", err
+	}
+
+	defer func() {
+		if e := recover(); e != nil {
+			err = errors.New(fmt.Sprintf("get sheet failed, %v, sheet=%d, row=%d, col=%d", e, sheet, row, col))
+		}
+	}()
+
+	sheetDoc, err := doc.GetSheet(sheet)
+	if err != nil {
+		return "", errors.New(fmt.Sprintf("get sheet failed, %s, sheet=%d, row=%d, col=%d", err.Error(), sheet, row, col))
+	}
+	rowDoc, err := sheetDoc.GetRow(row)
+	if err != nil {
+		return "", errors.New(fmt.Sprintf("get row failed, %s, sheet=%d, row=%d, col=%d", err.Error(), sheet, row, col))
+	}
+	c, err := rowDoc.GetCol(col)
+	if err != nil {
+		return "", errors.New(fmt.Sprintf("get col failed, %s, sheet=%d, row=%d, col=%d", err.Error(), sheet, row, col))
+	}
+	return c.GetString(), nil
 }
