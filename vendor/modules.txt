@@ -1,0 +1,42 @@
+# github.com/davecgh/go-spew v1.1.0
+github.com/davecgh/go-spew/spew
+# github.com/extrame/ole2 v0.0.0-20160812065207-d69429661ad7
+github.com/extrame/ole2
+# github.com/extrame/xls v0.0.1
+github.com/extrame/xls
+# github.com/metakeule/fmtdate v1.1.2
+github.com/metakeule/fmtdate
+# github.com/pmezard/go-difflib v1.0.0
+github.com/pmezard/go-difflib/difflib
+# github.com/shakinm/xlsReader v0.0.0-20190906035335-d1b7f35f8ab3
+github.com/shakinm/xlsReader/xls
+github.com/shakinm/xlsReader/cfb
+github.com/shakinm/xlsReader/helpers
+github.com/shakinm/xlsReader/xls/record
+github.com/shakinm/xlsReader/xls/structure
+# github.com/stretchr/testify v1.4.0
+github.com/stretchr/testify/assert
+# golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7
+golang.org/x/net/html/charset
+golang.org/x/net/html
+golang.org/x/net/html/atom
+# golang.org/x/text v0.3.0
+golang.org/x/text/encoding
+golang.org/x/text/encoding/charmap
+golang.org/x/text/encoding/htmlindex
+golang.org/x/text/transform
+golang.org/x/text/encoding/simplifiedchinese
+golang.org/x/text/encoding/internal/identifier
+golang.org/x/text/encoding/internal
+golang.org/x/text/encoding/japanese
+golang.org/x/text/encoding/korean
+golang.org/x/text/encoding/traditionalchinese
+golang.org/x/text/encoding/unicode
+golang.org/x/text/language
+golang.org/x/text/internal/utf8internal
+golang.org/x/text/runes
+golang.org/x/text/internal/tag
+# gopkg.in/xmlpath.v2 v2.0.0-20150820204837-860cbeca3ebc
+gopkg.in/xmlpath.v2
+# gopkg.in/yaml.v2 v2.2.2
+gopkg.in/yaml.v2
