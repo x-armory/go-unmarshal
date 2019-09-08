@@ -10,7 +10,7 @@ type Unmarshaler struct {
 	IgnoreError bool
 }
 
-func (m *Unmarshaler) unmarshal(r io.Reader, data interface{}) error {
+func (m *Unmarshaler) Unmarshal(r io.Reader, data interface{}) error {
 	bts, e := ioutil.ReadAll(r)
 	if e != nil {
 		return e
