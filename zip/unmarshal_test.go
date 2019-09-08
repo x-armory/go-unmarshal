@@ -11,12 +11,15 @@ import (
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"io"
 	"os"
+	"reflect"
+	"regexp"
 	"testing"
 	"time"
 )
 
 type TestUnmarshalModel struct {
 	FileName           string    `xm:"zip:FileName"`
+	FileNameDate       time.Time `xm:"zip:FileName pattern='\\d+[.]\\d+' format='2006.1' timezone='Asia/Shanghai'"`
 	FileSize           int       `xm:"zip:FileSize"`
 	FileSizeCompressed int       `xm:"zip:FileSizeCompressed"`
 	FileDate           time.Time `xm:"zip:FileModified format='2006-01-02 15:03:04' timezone='Asia/Shanghai'"`
@@ -37,10 +40,20 @@ type TestUnmarshalModel struct {
 func TestUnmarshal(t *testing.T) {
 	reader, e := os.Open("/Users/jiangchangqiang/Desktop/MarketData_Year_2019.zip")
 	assert.NoError(t, e)
+	fileNameDate := base.FieldTag{
+		Pattern:   regexp.MustCompile(`\d+[.]\d+`),
+		FieldType: reflect.TypeOf(time.Time{}),
+		Format:    `2006.1`,
+		Timezone:  time.FixedZone("UTC", 8*60*60),
+	}
 	unmarshaler := Unmarshaler{
 		Charset: "gbk",
 		FileFilters: []FileFilter{
 			func(fileIndex int, file *zip.File) bool {
+				value, e := fileNameDate.Parse(file.Name)
+				if e == nil {
+					println(fmt.Sprintf("%v", value.Interface().(time.Time)))
+				}
 				println(">>>>", fileIndex, file.Name)
 				return true
 			},
