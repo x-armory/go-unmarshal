@@ -29,26 +29,27 @@ type Unmarshaler struct {
 }
 
 func (m *Unmarshaler) Unmarshal(r io.Reader, data interface{}) error {
+	var rt = *m
 	// open excel doc
-	doc, e := GetDoc(r, m.Charset)
+	doc, e := GetDoc(r, rt.Charset)
 	if e != nil {
 		return e
 	}
 	// setup
-	m.DataLoader.Data = data
+	rt.DataLoader.Data = data
 	// 固定变量嵌套循环顺序
-	m.VarOrder = []string{"sheet", "row", "col"}
-	if m.ExitNoDataTimes <= 0 || m.ExitNoDataTimes > 10 {
-		m.ExitNoDataTimes = 3
+	rt.VarOrder = []string{"sheet", "row", "col"}
+	if rt.ExitNoDataTimes <= 0 || rt.ExitNoDataTimes > 10 {
+		rt.ExitNoDataTimes = 3
 	}
-	if m.ReadValueFunc == nil {
-		m.ReadValueFunc = make(map[string]base.FieldTagReadValueFunc)
+	if rt.ReadValueFunc == nil {
+		rt.ReadValueFunc = make(map[string]base.FieldTagReadValueFunc)
 	}
-	m.ReadValueFunc["excel"] = func(fieldTag *base.FieldTag, vars *base.Vars) (v string, err error) {
+	rt.ReadValueFunc["excel"] = func(fieldTag *base.FieldTag, vars *base.Vars) (v string, err error) {
 		return GetValue(doc, fieldTag.PathFilled)
 	}
 	// load data
-	return m.Load()
+	return rt.Load()
 }
 
 func GetDoc(r io.Reader, charset string) (*xls.Workbook, error) {

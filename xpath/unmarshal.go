@@ -19,21 +19,22 @@ type Unmarshaler struct {
 }
 
 func (m *Unmarshaler) Unmarshal(r io.Reader, data interface{}) error {
+	var rt = *m
 	// open zip doc
 	doc, e := GetDoc(r)
 	if e != nil {
 		return e
 	}
 	// setup
-	m.DataLoader.Data = data
-	if m.ReadValueFunc == nil {
-		m.ReadValueFunc = make(map[string]base.FieldTagReadValueFunc)
+	rt.DataLoader.Data = data
+	if rt.ReadValueFunc == nil {
+		rt.ReadValueFunc = make(map[string]base.FieldTagReadValueFunc)
 	}
-	m.ReadValueFunc["xpath"] = func(fieldTag *base.FieldTag, vars *base.Vars) (v string, err error) {
+	rt.ReadValueFunc["xpath"] = func(fieldTag *base.FieldTag, vars *base.Vars) (v string, err error) {
 		return GetValue(doc, fieldTag.PathFilled)
 	}
 	// load data
-	return m.Load()
+	return rt.Load()
 }
 
 func GetDoc(r io.Reader) (*xmlpath.Node, error) {
