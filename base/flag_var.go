@@ -11,12 +11,14 @@ import (
 // Min：变量下线；
 // Max：变量上限；
 // Val：自动生成的遍历值
+// Step：增长步长，默认为1
 type Var struct {
 	Name  string
 	Match string
 	Min   int
 	Max   int
 	Val   int
+	Step  int
 }
 
 func (v *Var) IsValid() bool {
@@ -29,7 +31,10 @@ func (v *Var) Reset() {
 	v.Val = v.Min
 }
 func (v *Var) Next() {
-	v.Val++
+	if v.Step == 0 {
+		v.Step = 1
+	}
+	v.Val += v.Step
 }
 
 // set          vars := [ v0,        v1,        v2,        v2                     ]
@@ -145,6 +150,7 @@ func (ms *VarMaps) Merge() *VarMap {
 					Name: v.Name,
 					Min:  v.Min,
 					Max:  v.Max,
+					Step: v.Step,
 				}
 			} else {
 				if reV.Min > v.Min {
@@ -152,6 +158,9 @@ func (ms *VarMaps) Merge() *VarMap {
 				}
 				if reV.Max < v.Max {
 					reV.Max = v.Max
+				}
+				if reV.Step != 0 && v.Step != 0 && reV.Step != v.Step {
+					reV.Step = 1
 				}
 			}
 		}
@@ -179,20 +188,27 @@ func (p VarPattern) Match(s string) *VarMap {
 	return &re
 }
 
-// 默认的变量匹配表达式，格式为：VarName[min:max]，min和max可以为空，默认值为0，999999
+// 默认的变量匹配表达式，格式为：VarName[min:max:step]，min和max可以为空，默认值为0，999999
 var DefaultVarPattern = VarPattern{
-	Pattern: regexp.MustCompile(`(\w+)\[(\d+)?:(\d+)?\]`),
+	Pattern: regexp.MustCompile(`(\w+)\[(\d+)?:(\d+)?(:\d+)?\]`),
 	ParseFunc: func(v []string) *Var {
-		if len(v) != 4 {
+		if len(v) != 5 {
 			return nil
 		}
 		var min = 0
 		var max = 999999
+		var step = 1
 		if v[2] != "" {
 			min, _ = strconv.Atoi(v[2])
 		}
 		if v[3] != "" {
 			max, _ = strconv.Atoi(v[3])
+		}
+		if v[4] != "" {
+			step, _ = strconv.Atoi(v[4][1:])
+		}
+		if step == 0 {
+			step = 1
 		}
 		if max < min {
 			min, max = max, min
@@ -202,6 +218,7 @@ var DefaultVarPattern = VarPattern{
 			Match: v[0],
 			Min:   min,
 			Max:   max,
+			Step:  step,
 		}
 	},
 }

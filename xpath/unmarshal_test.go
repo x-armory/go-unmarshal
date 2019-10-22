@@ -11,11 +11,11 @@ import (
 
 type MyType struct {
 	Source              string     `xm:"xpath://*[@id='content_right']/div/div[2]/a[1]"`
-	Id                  int        `xm:"xpath://*[@id='content_right']/div/table/tbody/tr[r[1:]]/td/span"`
-	Title               string     `xm:"xpath://*[@id='content_right']/div/table/tbody/tr[r[1:]]/td/a"`
+	Id                  int        `xm:"xpath://*[@id='content_right']/div/table/tbody/tr[r[1::3]]/td/span"`
+	Title               string     `xm:"xpath://*[@id='content_right']/div/table/tbody/tr[r[1::3]]/td/a"`
 	Year                int        `xm:"xpath://*[@id='form']/input[@name='datetime']/@value pattern='^\\d+'"`
-	Month               int        `xm:"xpath://*[@id='form']/input[@name='datetime']/@value pattern='^\\d+-(\\d+)'"`
-	Day                 int        `xm:"xpath://*[@id='form']/input[@name='datetime']/@value pattern='^\\d+-\\d+-(\\d+)'"`
+	Month               int        `xm:"xpath://*[@id='form']/input[@name='datetime']/@value pattern='^\\d+-(\\d+)' patternIdx='1'"`
+	Day                 int        `xm:"xpath://*[@id='form']/input[@name='datetime']/@value pattern='^\\d+-\\d+-(\\d+)' patternIdx='1'"`
 	Datetime            time.Time  `xm:"xpath://*[@id='form']/input[@name='datetime']/@value format='2006-01-02 15:04:05' timezone='UTC'"`
 	Date                *time.Time `xm:"xpath://*[@id='form']/input[@name='date']/@value pattern='\\d+-\\d+-\\d+' format='2006-01-02' timezone='Asia/Shanghai'"`
 	DefaultValueTime    time.Time  `xm:"xpath://*[@id='form']/input[@name='notExist']/@value pattern='\\d+-\\d+-\\d+' format='2006-01-02' timezone='Asia/Shanghai'"`

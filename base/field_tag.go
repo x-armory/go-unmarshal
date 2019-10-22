@@ -82,7 +82,7 @@ func (m *FieldTagMap) Filter(f func(tag *FieldTag) bool) *FieldTagMap {
 // 获取所有字段的FieldTag map，允许定义多个path schema
 // T，目标对象类型
 // tag, unmarshal tag is 'xm'
-// varPattern, 定义path中的变量格式，表达式格式为：LTag(vName)[(vMin):(vMax)]RTag，例如 \{(\w+)\[(\d+):(\d+)\]\}
+// varPattern, 定义path中的变量格式，表达式格式为：LTag(vName)[(vMin):(vMax)]RTag，例如 \{(\w+)\[(\d+):(\d+)(:(\d+))?\]\}
 // 需确保匹配项长度为4，0可用于整体替换，1表示变量名，2表示变量下限，3表示变量上限
 func GetFieldTags(T reflect.Type, tag string, varPattern *VarPattern) (*FieldTagMap, error) {
 	var result = make(FieldTagMap)
@@ -157,7 +157,7 @@ func (tag *FieldTag) SetValues(vs *Vars) *FieldTag {
 		var pathFilled = tag.Path
 		for _, v := range *vs {
 			if tv, ok := (*tag.Vars)[v.Name]; ok {
-				if tv.Min <= v.Val && v.Val <= tv.Max {
+				if tv.Min <= v.Val && v.Val <= tv.Max && (v.Val-tv.Min)%tv.Step == 0 {
 					tv.Val = v.Val
 					pathFilled = strings.ReplaceAll(pathFilled, tv.Match, strconv.Itoa(tv.Val))
 				} else {

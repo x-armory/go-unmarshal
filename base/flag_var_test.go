@@ -42,7 +42,7 @@ func TestDefaultVarPattern(t *testing.T) {
 }
 
 func TestDefaultVarPattern2(t *testing.T) {
-	path := "//*[@id=\"maincontent\"]/div[4]/table/tbody/tr[row[2:3]]/td[col[2:3]]"
+	path := "//*[@id=\"maincontent\"]/div[4]/table/tbody/tr[row[2:3:2]]/td[col[2:3]]"
 	vars := DefaultVarPattern.Match(path)
 	for name, v := range *vars {
 		fmt.Printf("%s -> %+v\n", name, *v)
@@ -51,9 +51,9 @@ func TestDefaultVarPattern2(t *testing.T) {
 
 func TestVarMaps_Merge(t *testing.T) {
 	var vms = make(VarMaps, 0)
-	vms = append(vms, DefaultVarPattern.Match("//*[@id=\"maincontent\"]/div[4]/table/tbody/tr[row[2:3]]/td[col[2:3]]"))
-	vms = append(vms, DefaultVarPattern.Match("//*[@id=\"maincontent\"]/div[4]/table/tbody/tr[row[2:40]]/td[col[20:1]]"))
-	vms = append(vms, DefaultVarPattern.Match("//*[@id=\"maincontent\"]/div[4]/table/tbody/tr[row[1:3]]/td[col[7:30]]"))
+	vms = append(vms, DefaultVarPattern.Match("//*[@id=\"maincontent\"]/div[4]/table/tbody/tr[row[2:3:2]]/td[col[2:3]]"))
+	vms = append(vms, DefaultVarPattern.Match("//*[@id=\"maincontent\"]/div[4]/table/tbody/tr[row[2:40:2]]/td[col[20:1]]"))
+	vms = append(vms, DefaultVarPattern.Match("//*[@id=\"maincontent\"]/div[4]/table/tbody/tr[row[1:3:2]]/td[col[7:30]]"))
 	vars := vms.Merge()
 	for name, v := range *vars {
 		fmt.Printf("%s -> %+v\n", name, *v)
