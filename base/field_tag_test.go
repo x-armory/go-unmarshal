@@ -47,7 +47,7 @@ func TestFieldTag_Parse(t *testing.T) {
 	tp := reflect.TypeOf(model)
 	tags, _ := GetFieldTags(tp, "xm", nil)
 	tag := (*tags)[2]
-	value, e := tag.Parse("1,2,3,4")
+	value, e := tag.Parse("	- ")
 	fmt.Printf("%v %v\n", value, e)
 }
 

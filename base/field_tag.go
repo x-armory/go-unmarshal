@@ -189,9 +189,9 @@ func (tag *FieldTag) Parse(str string) (reflect.Value, error) {
 		return reflect.Value{}, errors.New("FieldTag is nil")
 	}
 	if tag.Pattern != nil {
+		str = ""
 		allStringSubmatch := tag.Pattern.FindAllStringSubmatch(str, -1)
 		if len(allStringSubmatch) > 0 && len(allStringSubmatch) > tag.PatternGroupIdx {
-			str = ""
 			if tag.PatternGroupIdx > 0 {
 				if len(allStringSubmatch[tag.PatternGroupIdx]) > tag.PatternIdx && allStringSubmatch[tag.PatternGroupIdx][0] != "" {
 					str = allStringSubmatch[tag.PatternGroupIdx][tag.PatternIdx]
