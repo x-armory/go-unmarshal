@@ -222,7 +222,7 @@ func (tag *FieldTag) Parse(str string) (reflect.Value, error) {
 		if err != nil {
 			return reflect.Value{}, err
 		}
-		return reflect.ValueOf(f), err
+		return reflect.ValueOf(float32(f)), err
 	case reflect.Float64:
 		f, err := strconv.ParseFloat(str, 64)
 		if err != nil {
