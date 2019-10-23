@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"reflect"
+	"regexp"
 	"testing"
 )
 
 type TestGetFieldTagsModel struct {
 	F1 string `xm:"excel:sheet[5:7]/row[3:5]/col[3] pattern='\\d{4}-\\d{2}-\\d{2}' format='2006-01-02' timezone='Asia/Shanghai'"`
 	F2 string `xm:"excel:sheet[6]/row[:4:2]/col[3] pattern='\\d{4}-\\d{2}-\\d{2}' patternIdx='3' format='2006-01-02' timezone='Asia/Shanghai'"`
+	F3 string `xm:"excel:sheet[6]/row[:4:2]/col[3] pattern='\\d+' patternIdx='0' format='2006-01-02' timezone='Asia/Shanghai'"`
 }
 
 func TestGetFieldTags(t *testing.T) {
@@ -38,4 +40,18 @@ func TestFieldTag_Fill(t *testing.T) {
 		bts, _ := json.Marshal(tags)
 		fmt.Printf("%+v\n", string(bts))
 	}
+}
+
+func TestFieldTag_Parse(t *testing.T) {
+	model := TestGetFieldTagsModel{}
+	tp := reflect.TypeOf(model)
+	tags, _ := GetFieldTags(tp, "xm", nil)
+	tag := (*tags)[2]
+	value, e := tag.Parse("1,2,3,4")
+	fmt.Printf("%v %v\n", value, e)
+}
+
+func TestReg(t *testing.T) {
+	allString := regexp.MustCompile("\\d+").FindAllString("3:4", -1)
+	println(len(allString))
 }

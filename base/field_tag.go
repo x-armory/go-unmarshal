@@ -16,8 +16,11 @@ var posSchemaFindReg = regexp.MustCompile("^(\\w+)[:](.+)")
 // 取值表达式，格式为：pattern='regexp'
 var posPatternFindReg = regexp.MustCompile(" +pattern='([^']+)'")
 
-// 取值表达式索引，如果取值表达式匹配结果超过一项，需要使用索引指定，格式为：patternIdx='111'
-var posPatternIndexFindReg = regexp.MustCompile(" +patternIdx='(\\d+)'")
+// 取值表达式索引，格式为：patternIdx='n[:g]'，n和g默认值都是0
+// n表示取匹配组中的第几个匹配值，默认0表示整个表达式匹配值
+// g表示取第几组匹配值，默认0表示取所有匹配组
+var posPatternIndexFindReg = regexp.MustCompile(" +patternIdx='((\\d+)([:]\\d+)?)'")
+var posPatternIndexSplitReg = regexp.MustCompile("\\d+")
 
 // 格式表达式，如日期格式，格式为：format='...'
 var posFormatFindReg = regexp.MustCompile(" +format='([^']+)'")
@@ -33,17 +36,18 @@ type FieldValueMap map[int]reflect.Value
 type FieldTagReadValueFunc func(fieldTag *FieldTag, vars *Vars) (v string, err error)
 
 type FieldTag struct {
-	Id         int            //field index
-	FieldName  string         //field name
-	FieldType  reflect.Type   //
-	Schema     string         // zip | xls | xlsx | xpath | csv
-	Path       string         //position expression; e.g. sheet[x:x]/row[3:x]/col[3]
-	PathFilled string         //position expression filled vars; e.g. sheet[1]/row[2]/col[3]
-	Pattern    *regexp.Regexp //find value
-	PatternIdx int            //find value
-	Format     string         //format value, only for time
-	Timezone   *time.Location //default +8, only for time
-	Vars       *VarMap        //var map in Path
+	Id              int            //field index
+	FieldName       string         //field name
+	FieldType       reflect.Type   //
+	Schema          string         // zip | xls | xlsx | xpath | csv
+	Path            string         //position expression; e.g. sheet[x:x]/row[3:x]/col[3]
+	PathFilled      string         //position expression filled vars; e.g. sheet[1]/row[2]/col[3]
+	Pattern         *regexp.Regexp //find value
+	PatternIdx      int            //find value, default 0
+	PatternGroupIdx int            //find value, default 0
+	Format          string         //format value, only for time
+	Timezone        *time.Location //default +8, only for time
+	Vars            *VarMap        //var map in Path
 }
 type FieldTagMap map[int]*FieldTag
 
@@ -126,20 +130,29 @@ func GetFieldTags(T reflect.Type, tag string, varPattern *VarPattern) (*FieldTag
 		if patternStr != "" {
 			pattern = regexp.MustCompile(patternStr)
 		}
-		patternIdx, _ := strconv.Atoi(patternIdxStr)
+
+		patternIdxMatchStr := posPatternIndexSplitReg.FindAllString(patternIdxStr, -1)
+		var patternIdx, patternGroupIdx int
+		if len(patternIdxMatchStr) > 0 {
+			patternIdx, _ = strconv.Atoi(patternIdxMatchStr[0])
+		}
+		if len(patternIdxMatchStr) > 1 {
+			patternGroupIdx, _ = strconv.Atoi(patternIdxMatchStr[1])
+		}
 
 		result[i] =
 			&FieldTag{
-				Id:         i,
-				FieldName:  f.Name,
-				FieldType:  f.Type,
-				Schema:     schema,
-				Path:       path,
-				Pattern:    pattern,
-				PatternIdx: patternIdx,
-				Format:     formatStr,
-				Timezone:   location,
-				Vars:       varPattern.Match(path),
+				Id:              i,
+				FieldName:       f.Name,
+				FieldType:       f.Type,
+				Schema:          schema,
+				Path:            path,
+				Pattern:         pattern,
+				PatternIdx:      patternIdx,
+				PatternGroupIdx: patternGroupIdx,
+				Format:          formatStr,
+				Timezone:        location,
+				Vars:            varPattern.Match(path),
 			}
 	}
 	if len(result) == 0 {
@@ -176,11 +189,20 @@ func (tag *FieldTag) Parse(str string) (reflect.Value, error) {
 		return reflect.Value{}, errors.New("FieldTag is nil")
 	}
 	if tag.Pattern != nil {
-		subMatches := tag.Pattern.FindStringSubmatch(str)
-		if len(subMatches) > tag.PatternIdx && subMatches[0] != "" {
-			str = subMatches[tag.PatternIdx]
-		} else {
+		allStringSubmatch := tag.Pattern.FindAllStringSubmatch(str, -1)
+		if len(allStringSubmatch) > 0 && len(allStringSubmatch) > tag.PatternGroupIdx {
 			str = ""
+			if tag.PatternGroupIdx > 0 {
+				if len(allStringSubmatch[tag.PatternGroupIdx]) > tag.PatternIdx && allStringSubmatch[tag.PatternGroupIdx][0] != "" {
+					str = allStringSubmatch[tag.PatternGroupIdx][tag.PatternIdx]
+				}
+			} else {
+				for t := range allStringSubmatch {
+					if len(allStringSubmatch[t]) > tag.PatternIdx && allStringSubmatch[t][0] != "" {
+						str += allStringSubmatch[t][tag.PatternIdx]
+					}
+				}
+			}
 		}
 	}
 	if str == "" && tag.FieldType.Kind() != reflect.String {
@@ -225,7 +247,7 @@ func splitPosConfig(str string, pattern *regexp.Regexp, defaultV string) (string
 		return str, defaultV
 	}
 	subMatches := pattern.FindStringSubmatch(str)
-	if len(subMatches) == 2 {
+	if len(subMatches) > 1 {
 		return strings.Replace(str, subMatches[0], "", 1), subMatches[1]
 	} else {
 		return str, defaultV
