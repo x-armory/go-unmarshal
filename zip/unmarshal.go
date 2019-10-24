@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"github.com/x-armory/go-unmarshal/base"
+	"github.com/x-armory/go-unmarshal/csv"
 	"github.com/x-armory/go-unmarshal/excel/xls"
 	"github.com/x-armory/go-unmarshal/xpath"
 	"golang.org/x/net/html/charset"
@@ -68,6 +69,8 @@ rootLoop:
 		switch ext {
 		default:
 			continue
+		case ".csv", ".txt":
+			unmarshal = &csv.Unmarshaler{DataLoader: loader}
 		case ".xls":
 			unmarshal = &xls.Unmarshaler{Charset: m.Charset, DataLoader: loader}
 		case ".html", ".htm", ".xhtml", ".xml":
