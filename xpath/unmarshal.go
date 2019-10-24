@@ -20,7 +20,7 @@ type Unmarshaler struct {
 
 func (m *Unmarshaler) Unmarshal(r io.Reader, data interface{}) error {
 	var rt = *m
-	// open zip doc
+	// open doc
 	doc, e := GetDoc(r)
 	if e != nil {
 		return e
