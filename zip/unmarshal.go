@@ -46,7 +46,7 @@ func (m *Unmarshaler) Unmarshal(r io.Reader, data interface{}) error {
 	if rt.Charset == "" {
 		rt.Charset = "utf-8"
 	}
-	switch rt.Charset {
+	switch strings.ToLower(rt.Charset) {
 	case "gbk":
 		rt.charsetDecoder = simplifiedchinese.GBK.NewDecoder()
 	}
