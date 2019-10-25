@@ -9,6 +9,9 @@ import (
 	"github.com/x-armory/go-unmarshal/excel/xls"
 	"github.com/x-armory/go-unmarshal/xpath"
 	"golang.org/x/net/html/charset"
+	"golang.org/x/text/encoding"
+	"golang.org/x/text/encoding/simplifiedchinese"
+	"golang.org/x/text/transform"
 	"io"
 	"io/ioutil"
 	"path/filepath"
@@ -31,36 +34,45 @@ import (
 // CompressedSize64：int64 压缩后大小；
 // UncompressedSize64：int64 解压后大小；
 type Unmarshaler struct {
-	Charset     string
-	FileFilters []FileFilter
+	Charset        string
+	charsetDecoder *encoding.Decoder
+	FileFilters    []FileFilter
 	base.DataLoader
 }
 type FileFilter func(fileIndex int, file *zip.File) bool
 
 func (m *Unmarshaler) Unmarshal(r io.Reader, data interface{}) error {
+	var rt = *m
+	if rt.Charset == "" {
+		rt.Charset = "utf-8"
+	}
+	switch rt.Charset {
+	case "gbk":
+		rt.charsetDecoder = simplifiedchinese.GBK.NewDecoder()
+	}
 	// zip暂时不允许写数据，因为数据量通常很大
-	m.DataLoader.WriteData = false
+	rt.DataLoader.WriteData = false
 	//读取zip
-	doc, e := GetDoc(r, m.Charset)
+	doc, e := GetDoc(r, rt.Charset)
 	if e != nil {
 		return e
 	}
 	// 准备反序列化工具，在定制itemFilters之前设置zip注解处理filter
-	m.Data = data
-	if m.ReadValueFunc == nil {
-		m.ReadValueFunc = make(map[string]base.FieldTagReadValueFunc)
+	rt.Data = data
+	if rt.ReadValueFunc == nil {
+		rt.ReadValueFunc = make(map[string]base.FieldTagReadValueFunc)
 	}
 	// 按顺序反序列化所有文件
 rootLoop:
 	for i, file := range doc.File {
 		// 过滤、校验文件，可用于筛选文件类型，获取文件名变量等
-		for _, filter := range m.FileFilters {
+		for _, filter := range rt.FileFilters {
 			if !filter(i, file) {
 				continue rootLoop
 			}
 		}
 		// 根据扩展名准备文件反序列化工具
-		loader := m.DataLoader
+		loader := rt.DataLoader
 		loader.ReadValueFunc["zip"] = func(fieldTag *base.FieldTag, vars *base.Vars) (v string, err error) {
 			return GetValue(file, fieldTag.PathFilled)
 		}
@@ -72,18 +84,24 @@ rootLoop:
 		case ".csv", ".txt":
 			unmarshal = &csv.Unmarshaler{DataLoader: loader}
 		case ".xls":
-			unmarshal = &xls.Unmarshaler{Charset: m.Charset, DataLoader: loader}
+			unmarshal = &xls.Unmarshaler{Charset: rt.Charset, DataLoader: loader}
 		case ".html", ".htm", ".xhtml", ".xml":
 			unmarshal = &xpath.Unmarshaler{DataLoader: loader}
 		}
 		// 执行反序列化
 		if e := func() error {
+			var reader io.Reader
 			fileReader, e := file.Open()
 			if e != nil {
 				return e
 			}
 			defer fileReader.Close()
-			if e := unmarshal.Unmarshal(fileReader, data); e != nil {
+			if rt.charsetDecoder == nil {
+				reader = fileReader
+			} else {
+				reader = transform.NewReader(fileReader, rt.charsetDecoder)
+			}
+			if e := unmarshal.Unmarshal(reader, data); e != nil {
 				return e
 			}
 			return nil
