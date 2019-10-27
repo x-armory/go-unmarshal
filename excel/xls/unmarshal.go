@@ -24,14 +24,13 @@ import (
 // 默认遇到空行退出循环
 // data数据类型支持：*Obj *[]Obj *[]*Obj；
 type Unmarshaler struct {
-	Charset string
 	base.DataLoader
 }
 
 func (m *Unmarshaler) Unmarshal(r io.Reader, data interface{}) error {
 	var rt = *m
 	// open excel doc
-	doc, e := GetDoc(r, rt.Charset)
+	doc, e := GetDoc(r)
 	if e != nil {
 		return e
 	}
@@ -52,7 +51,7 @@ func (m *Unmarshaler) Unmarshal(r io.Reader, data interface{}) error {
 	return rt.Load()
 }
 
-func GetDoc(r io.Reader, charset string) (*xls.Workbook, error) {
+func GetDoc(r io.Reader) (*xls.Workbook, error) {
 	dir := path.Join(os.TempDir(), fmt.Sprintf("xarmory/go-unmarshal/xls/%d", rand.Int63()))
 	err := os.MkdirAll(dir, 0700)
 	if err != nil {

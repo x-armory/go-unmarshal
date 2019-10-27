@@ -31,7 +31,7 @@ func TestGetVar_(t *testing.T) {
 }
 
 func TestUnmarshaler_Unmarshal(t *testing.T) {
-	file, e := os.Open("/private/tmp/20191022_DCE_DPL/20191022_a2001_成交量_买持仓_卖持仓排名.txt")
+	file, e := os.Open("/Users/jiangchangqiang/20191022_DCE_DPL/20191022_a2001_成交量_买持仓_卖持仓排名.txt")
 	assert.NoError(t, e)
 
 	unmarshaler := Unmarshaler{
@@ -61,7 +61,7 @@ func TestUnmarshaler_Unmarshal(t *testing.T) {
 }
 
 func TestReader(t *testing.T) {
-	file, e := os.Open("/private/tmp/20191022_DCE_DPL/20191022_a2001_成交量_买持仓_卖持仓排名.txt")
+	file, e := os.Open("/Users/jiangchangqiang/20191022_DCE_DPL/20191022_a2001_成交量_买持仓_卖持仓排名.txt")
 	assert.NoError(t, e)
 	reader := bufio.NewReader(file)
 

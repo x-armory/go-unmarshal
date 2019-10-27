@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/x-armory/go-unmarshal/base"
+	"golang.org/x/text/encoding/simplifiedchinese"
 	"os"
 	"reflect"
 	"regexp"
@@ -43,7 +44,7 @@ func TestUnmarshal(t *testing.T) {
 		Timezone:  time.FixedZone("UTC", 8*60*60),
 	}
 	unmarshaler := Unmarshaler{
-		Charset: "gbk",
+		Encoding: simplifiedchinese.GBK,
 		FileFilters: []FileFilter{
 			func(fileIndex int, file *zip.File) bool {
 				value, e := fileNameDate.Parse(file.Name)
@@ -88,7 +89,7 @@ func TestZipCsv(t *testing.T) {
 	file, e := os.Open("/Users/jiangchangqiang/20191022_DCE_DPL.zip")
 	assert.NoError(t, e)
 	unmarshaler := Unmarshaler{
-		Charset: "gbk",
+		Encoding: simplifiedchinese.GBK,
 		DataLoader: base.DataLoader{
 			ExitNoDataTimes: 10,
 			VarOrder:        []string{"r", "col"},
@@ -125,7 +126,7 @@ func TestZipCsvRowParseFunc(t *testing.T) {
 	file, e := os.Open("/Users/jiangchangqiang/20191022_DCE_DPL.zip")
 	assert.NoError(t, e)
 	unmarshaler := Unmarshaler{
-		Charset: "gbk",
+		Encoding: simplifiedchinese.GBK,
 		DataLoader: base.DataLoader{
 			ExitNoDataTimes: 10,
 			VarOrder:        []string{"r", "col"},

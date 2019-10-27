@@ -41,7 +41,6 @@ func TestXlsUnmarshal(t *testing.T) {
 	file, e := os.Open("/Users/jiangchangqiang/Desktop/test1.xls")
 	assert.NoError(t, e)
 	xlsUnmarshaler := &Unmarshaler{
-		Charset: "utf-8",
 		DataLoader: base.DataLoader{
 			ItemFilters: []base.ItemFilter{
 				func(item interface{}, vars *base.Vars) (flow base.FlowControl, deep int) {

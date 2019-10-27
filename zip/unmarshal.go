@@ -2,23 +2,18 @@ package zip
 
 import (
 	"archive/zip"
-	"bufio"
 	"bytes"
 	"errors"
 	"github.com/x-armory/go-unmarshal/base"
 	"github.com/x-armory/go-unmarshal/csv"
 	"github.com/x-armory/go-unmarshal/excel/xls"
 	"github.com/x-armory/go-unmarshal/xpath"
-	"golang.org/x/net/html/charset"
 	"golang.org/x/text/encoding"
-	"golang.org/x/text/encoding/simplifiedchinese"
-	"golang.org/x/text/transform"
 	"io"
 	"io/ioutil"
 	"path/filepath"
 	"sort"
 	"strconv"
-	"strings"
 )
 
 // zip反序列化，按文件名顺序读取文件，根据文件后缀名选择反序列化工具；
@@ -26,6 +21,7 @@ import (
 // Charset，默认utf-8；
 // FileFilters，文件过滤器，返回false时跳过文件，可用于截取文件中的变量，并在后续itemFilters中设置到item里，比如文件名中可能存在的分类、日期等；
 // RowParseFunc，行解析工具，目前支持csv格式的行转换
+// GetSepFunc，获取字段分割符
 // DataLoader.VarOrder，变量嵌套顺序，默认随机，excel文档固定按 sheet->row->col遍历，指定无效；
 // DataLoader.WriteDate，写数据开关，因为zip包数据流通常非常大，暂时设置无效，统一不写数据；
 // DataLoader.ItemFilters，目标对象元素过滤器，用于校验、处理元素，并可控制文件反序列化流程；
@@ -36,23 +32,16 @@ import (
 // CompressedSize64：int64 压缩后大小；
 // UncompressedSize64：int64 解压后大小；
 type Unmarshaler struct {
-	Charset        string
-	charsetDecoder *encoding.Decoder
-	FileFilters    []FileFilter
-	RowParseFunc   func(string) []string
+	Encoding     encoding.Encoding
+	FileFilters  []FileFilter
+	RowParseFunc func(string) []string
+	GetSepFunc   func() string
 	base.DataLoader
 }
 type FileFilter func(fileIndex int, file *zip.File) bool
 
 func (m *Unmarshaler) Unmarshal(r io.Reader, data interface{}) error {
 	var rt = *m
-	if rt.Charset == "" {
-		rt.Charset = "utf-8"
-	}
-	switch strings.ToLower(rt.Charset) {
-	case "gbk":
-		rt.charsetDecoder = simplifiedchinese.GBK.NewDecoder()
-	}
 	// zip暂时不允许写数据，因为数据量通常很大
 	rt.DataLoader.WriteData = false
 	//读取zip
@@ -85,9 +74,9 @@ rootLoop:
 		default:
 			continue
 		case ".csv", ".txt":
-			unmarshal = &csv.Unmarshaler{RowParseFunc: rt.RowParseFunc, DataLoader: loader}
+			unmarshal = &csv.Unmarshaler{RowParseFunc: rt.RowParseFunc, GetSepFunc: rt.GetSepFunc, DataLoader: loader}
 		case ".xls":
-			unmarshal = &xls.Unmarshaler{Charset: rt.Charset, DataLoader: loader}
+			unmarshal = &xls.Unmarshaler{DataLoader: loader}
 		case ".html", ".htm", ".xhtml", ".xml":
 			unmarshal = &xpath.Unmarshaler{DataLoader: loader}
 		}
@@ -98,22 +87,11 @@ rootLoop:
 				return e
 			}
 			defer fileReader.Close()
-			contentBytes, e := ioutil.ReadAll(fileReader)
-			bytesReader := bytes.NewReader(contentBytes)
-			_, e = bytesReader.Seek(0, io.SeekStart)
+			e, newReader := base.TransformReaderEncoding(fileReader, rt.Encoding)
 			if e != nil {
 				return e
 			}
-			decoder := rt.DetermineEncoding(bytesReader)
-			_, e = bytesReader.Seek(0, io.SeekStart)
-			if e != nil {
-				return e
-			}
-			var reader io.Reader = bytesReader
-			if decoder != nil {
-				reader = transform.NewReader(bytesReader, decoder)
-			}
-			if e := unmarshal.Unmarshal(reader, data); e != nil {
+			if e := unmarshal.Unmarshal(newReader, data); e != nil {
 				return e
 			}
 			return nil
@@ -141,9 +119,9 @@ func (m *Unmarshaler) GetDoc(r io.Reader) (*zip.Reader, error) {
 		return nil, errors.New("no file found in zip")
 	}
 	// decode file name
-	if m.charsetDecoder != nil {
+	if m.Encoding != nil {
 		for _, file := range reader.File {
-			file.Name, e = m.charsetDecoder.String(file.Name)
+			file.Name, e = m.Encoding.NewDecoder().String(file.Name)
 			if e != nil {
 				return nil, e
 			}
@@ -171,18 +149,4 @@ func (m *Unmarshaler) GetValue(doc *zip.File, path string) (string, error) {
 		return strconv.FormatUint(doc.UncompressedSize64, 10), nil
 	}
 	return "", nil
-}
-
-// 有很多压缩包，文件名和文件内容编码格式不一致，比如名称是GBK编码，内容是UTF-8编码
-// 先尝试从文件bom判断是否utf编码，如果文件内容不包含bom，则用指定的编码读取文件内容
-func (m *Unmarshaler) DetermineEncoding(r io.Reader) *encoding.Decoder {
-	bytes, err := bufio.NewReader(r).Peek(1024)
-	if err != nil {
-		panic(err)
-	}
-	_, name, _ := charset.DetermineEncoding(bytes, "")
-	if name != "utf-8" && m.charsetDecoder != nil {
-		return m.charsetDecoder
-	}
-	return nil
 }

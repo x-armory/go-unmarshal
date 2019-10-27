@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/x-armory/go-unmarshal/base"
+	"golang.org/x/text/encoding"
 	"io"
 	"regexp"
 	"strconv"
@@ -14,13 +15,26 @@ import (
 // ColCount不为0时，用于过滤长度不匹配的行
 type Unmarshaler struct {
 	base.DataLoader
+	Encoding     encoding.Encoding
+	GetSepFunc   func() string
 	RowParseFunc func(string) []string
+}
+
+func DefaultGetSepFunc() string {
+	return "\t"
 }
 
 func (m *Unmarshaler) Unmarshal(r io.Reader, data interface{}) error {
 	var rt = *m
+	if m.GetSepFunc == nil {
+		m.GetSepFunc = DefaultGetSepFunc
+	}
+	err, newReader := base.TransformReaderEncoding(r, rt.Encoding)
+	if err != nil {
+		return err
+	}
 	// open doc
-	doc, e := m.GetDoc(r)
+	doc, e := m.GetDoc(newReader)
 	if e != nil {
 		return e
 	}
@@ -51,7 +65,7 @@ func (m *Unmarshaler) GetDoc(r io.Reader) (re [][]string, err error) {
 		if m.RowParseFunc != nil {
 			split = m.RowParseFunc(content)
 		} else {
-			split = strings.Split(content, "\t")
+			split = strings.Split(content, m.GetSepFunc())
 		}
 		re = append(re, split)
 	}
