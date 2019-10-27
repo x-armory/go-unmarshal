@@ -11,7 +11,6 @@ import (
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/simplifiedchinese"
-	"golang.org/x/text/transform"
 	"io"
 	"io/ioutil"
 	"path/filepath"
@@ -23,10 +22,11 @@ import (
 // zip反序列化，按文件名顺序读取文件，根据文件后缀名选择反序列化工具；
 // 目前支持excel(xls)、xml(html/htm/xml/xhtml)两种格式；
 // Charset，默认utf-8；
-// varOrder，变量嵌套顺序，默认随机，excel文档固定按 sheet->row->col遍历，指定无效；
-// writeDate，写数据开关，因为zip包数据流通常非常大，暂时设置无效，统一不写数据；
 // FileFilters，文件过滤器，返回false时跳过文件，可用于截取文件中的变量，并在后续itemFilters中设置到item里，比如文件名中可能存在的分类、日期等；
-// itemFilters，目标对象元素过滤器，用于校验、处理元素，并可控制文件反序列化流程；
+// RowParseFunc，行解析工具，目前支持csv格式的行转换
+// DataLoader.VarOrder，变量嵌套顺序，默认随机，excel文档固定按 sheet->row->col遍历，指定无效；
+// DataLoader.WriteDate，写数据开关，因为zip包数据流通常非常大，暂时设置无效，统一不写数据；
+// DataLoader.ItemFilters，目标对象元素过滤器，用于校验、处理元素，并可控制文件反序列化流程；
 // 目标对象类型可使用tag xm:"zip:VarName pattern='' format='' timezone=''"获取文件相关信息，支持的var变量包括：
 // FileName：string，文件名；
 // Comment：string，文件备注；
@@ -37,6 +37,7 @@ type Unmarshaler struct {
 	Charset        string
 	charsetDecoder *encoding.Decoder
 	FileFilters    []FileFilter
+	RowParseFunc   func(string) []string
 	base.DataLoader
 }
 type FileFilter func(fileIndex int, file *zip.File) bool
@@ -82,7 +83,7 @@ rootLoop:
 		default:
 			continue
 		case ".csv", ".txt":
-			unmarshal = &csv.Unmarshaler{DataLoader: loader}
+			unmarshal = &csv.Unmarshaler{RowParseFunc: rt.RowParseFunc, DataLoader: loader}
 		case ".xls":
 			unmarshal = &xls.Unmarshaler{Charset: rt.Charset, DataLoader: loader}
 		case ".html", ".htm", ".xhtml", ".xml":
@@ -96,11 +97,11 @@ rootLoop:
 				return e
 			}
 			defer fileReader.Close()
-			if rt.charsetDecoder == nil {
-				reader = fileReader
-			} else {
-				reader = transform.NewReader(fileReader, rt.charsetDecoder)
-			}
+			//if rt.charsetDecoder == nil {
+			reader = fileReader
+			//} else {
+			//	reader = transform.NewReader(fileReader, rt.charsetDecoder)
+			//}
 			if e := unmarshal.Unmarshal(reader, data); e != nil {
 				return e
 			}

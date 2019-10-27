@@ -13,6 +13,7 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 )
@@ -154,6 +155,48 @@ func TestZipCsv(t *testing.T) {
 		},
 	}
 	data := []*TestZipCsvDto{}
+	e = unmarshaler.Unmarshal(file, &data)
+	assert.NoError(t, e)
+}
+
+type TestZipCsvRowParseFuncDto struct {
+	QhCode     string `xm:"zip:FileName pattern='[a-zA-Z]{1,4}[0-9]{4}'"`
+	Seq        int    `xm:"csv://row[r[0:]]/col[0] pattern='\\d+'"`
+	MemberName string `xm:"csv://row[r[0:]]/col[1]"`
+	Vol        int    `xm:"csv://row[r[0:]]/col[2] pattern='[-]?\\d+'"`
+	Add        int    `xm:"csv://row[r[0:]]/col[3] pattern='[-]?\\d+'"`
+}
+
+func TestZipCsvRowParseFunc(t *testing.T) {
+	file, e := os.Open("/Users/jiangchangqiang/20191022_DCE_DPL.zip")
+	assert.NoError(t, e)
+	unmarshaler := Unmarshaler{
+		Charset: "gbk",
+		DataLoader: base.DataLoader{
+			ExitNoDataTimes: 10,
+			VarOrder:        []string{"r", "col"},
+			ItemFilters: []base.ItemFilter{
+				func(item interface{}, vars *base.Vars) (flow base.FlowControl, deep int) {
+					data, ok := item.(*TestZipCsvRowParseFuncDto)
+					if !ok {
+						return base.Forward, 0
+					}
+					if data.Seq == 0 || data.Vol == 0 {
+						return base.Continue, 0
+					}
+					fmt.Printf("%+v\n", data)
+					return base.Forward, 0
+				},
+			},
+		},
+		RowParseFunc: func(s string) []string {
+			s = regexp.MustCompile("[\t ]+").ReplaceAllString(s, "\t")
+			s = regexp.MustCompile("^[\t ]").ReplaceAllString(s, "")
+			s = regexp.MustCompile("[\t ]$").ReplaceAllString(s, "")
+			return strings.Split(s, "\t")
+		},
+	}
+	data := []*TestZipCsvRowParseFuncDto{}
 	e = unmarshaler.Unmarshal(file, &data)
 	assert.NoError(t, e)
 }

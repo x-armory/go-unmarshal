@@ -14,12 +14,13 @@ import (
 // ColCount不为0时，用于过滤长度不匹配的行
 type Unmarshaler struct {
 	base.DataLoader
+	RowParseFunc func(string) []string
 }
 
 func (m *Unmarshaler) Unmarshal(r io.Reader, data interface{}) error {
 	var rt = *m
 	// open doc
-	doc, e := GetDoc(r)
+	doc, e := m.GetDoc(r)
 	if e != nil {
 		return e
 	}
@@ -35,7 +36,7 @@ func (m *Unmarshaler) Unmarshal(r io.Reader, data interface{}) error {
 	return rt.Load()
 }
 
-func GetDoc(r io.Reader) (re [][]string, err error) {
+func (m *Unmarshaler) GetDoc(r io.Reader) (re [][]string, err error) {
 	reader := bufio.NewReader(r)
 	for true {
 		line, _, e := reader.ReadLine()
@@ -46,7 +47,12 @@ func GetDoc(r io.Reader) (re [][]string, err error) {
 			break
 		}
 		content := string(line)
-		split := strings.Split(content, "\t")
+		var split []string
+		if m.RowParseFunc != nil {
+			split = m.RowParseFunc(content)
+		} else {
+			split = strings.Split(content, "\t")
+		}
 		re = append(re, split)
 	}
 	return re, nil

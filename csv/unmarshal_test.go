@@ -17,6 +17,14 @@ type MyDto struct {
 	Add        int    `xm:"csv://row[r[0:]]/col[5] pattern='[-]?\\d+'"`
 }
 
+func TestSplit(t *testing.T) {
+	str := "a b   c"
+	split := strings.Split(str, " +")
+	for i, s := range split {
+		print("(", i, ")", s, "\t")
+	}
+}
+
 func TestGetVar_(t *testing.T) {
 	r := regexp.MustCompile(`//(row\[)?(\d+)(\])?/(col\[)?(\d+)(\])?`).MatchString("//row[2]/col[1]")
 	println(r)
