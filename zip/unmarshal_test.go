@@ -2,14 +2,9 @@ package zip
 
 import (
 	"archive/zip"
-	"bufio"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/x-armory/go-unmarshal/base"
-	"golang.org/x/net/html/charset"
-	"golang.org/x/text/encoding"
-	"golang.org/x/text/encoding/simplifiedchinese"
-	"io"
 	"os"
 	"reflect"
 	"regexp"
@@ -81,48 +76,6 @@ func TestUnmarshal(t *testing.T) {
 	unmarshaler.Unmarshal(reader, &[]*TestUnmarshalModel{})
 }
 
-func TestCharset(t *testing.T) {
-	file, e := os.Open("/Users/jiangchangqiang/Desktop/MarketData_Year_2019.zip")
-	assert.NoError(t, e)
-	i := determineEncoding(file)
-	fmt.Printf("%v\n", i)
-
-	//reader := transform.NewReader(file, i.NewDecoder())
-	info, e := file.Stat()
-	assert.NoError(t, e)
-
-	newReader, e := zip.NewReader(file, info.Size())
-	assert.NoError(t, e)
-
-	for _, f := range newReader.File {
-		closer, e := f.Open()
-		assert.NoError(t, e)
-		fileEncoding := determineEncoding(closer)
-
-		s, e := fileEncoding.NewDecoder().String(f.Name)
-		assert.NoError(t, e)
-
-		e2, name := charset.Lookup("gbk")
-		fmt.Printf("%v\t%v\n", e2, name)
-
-		i2, e := simplifiedchinese.GBK.NewDecoder().String(f.Name)
-		assert.NoError(t, e)
-
-		println(f.Name)
-		println(s)
-		println(i2)
-		fmt.Printf("%v\n", fileEncoding)
-	}
-}
-func determineEncoding(r io.Reader) encoding.Encoding {
-	bytes, err := bufio.NewReader(r).Peek(1024)
-	if err != nil {
-		panic(err)
-	}
-	e, _, _ := charset.DetermineEncoding(bytes, "")
-	return e
-}
-
 type TestZipCsvDto struct {
 	QhCode     string `xm:"zip:FileName pattern='[a-zA-Z]{1,4}[0-9]{4}'"`
 	Seq        int    `xm:"csv://row[r[0:]]/col[0] pattern='\\d+'"`
@@ -168,6 +121,7 @@ type TestZipCsvRowParseFuncDto struct {
 }
 
 func TestZipCsvRowParseFunc(t *testing.T) {
+	//file, e := os.Open("/Users/jiangchangqiang/20050104_DCE_DPL.zip")
 	file, e := os.Open("/Users/jiangchangqiang/20191022_DCE_DPL.zip")
 	assert.NoError(t, e)
 	unmarshaler := Unmarshaler{

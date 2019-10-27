@@ -2,6 +2,7 @@ package zip
 
 import (
 	"archive/zip"
+	"bufio"
 	"bytes"
 	"errors"
 	"github.com/x-armory/go-unmarshal/base"
@@ -11,6 +12,7 @@ import (
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/simplifiedchinese"
+	"golang.org/x/text/transform"
 	"io"
 	"io/ioutil"
 	"path/filepath"
@@ -54,7 +56,7 @@ func (m *Unmarshaler) Unmarshal(r io.Reader, data interface{}) error {
 	// zip暂时不允许写数据，因为数据量通常很大
 	rt.DataLoader.WriteData = false
 	//读取zip
-	doc, e := GetDoc(r, rt.Charset)
+	doc, e := rt.GetDoc(r)
 	if e != nil {
 		return e
 	}
@@ -75,7 +77,7 @@ rootLoop:
 		// 根据扩展名准备文件反序列化工具
 		loader := rt.DataLoader
 		loader.ReadValueFunc["zip"] = func(fieldTag *base.FieldTag, vars *base.Vars) (v string, err error) {
-			return GetValue(file, fieldTag.PathFilled)
+			return rt.GetValue(file, fieldTag.PathFilled)
 		}
 		var unmarshal base.Unmarshaler
 		ext := filepath.Ext(file.Name)
@@ -91,17 +93,26 @@ rootLoop:
 		}
 		// 执行反序列化
 		if e := func() error {
-			var reader io.Reader
 			fileReader, e := file.Open()
 			if e != nil {
 				return e
 			}
 			defer fileReader.Close()
-			//if rt.charsetDecoder == nil {
-			reader = fileReader
-			//} else {
-			//	reader = transform.NewReader(fileReader, rt.charsetDecoder)
-			//}
+			contentBytes, e := ioutil.ReadAll(fileReader)
+			bytesReader := bytes.NewReader(contentBytes)
+			_, e = bytesReader.Seek(0, io.SeekStart)
+			if e != nil {
+				return e
+			}
+			decoder := rt.DetermineEncoding(bytesReader)
+			_, e = bytesReader.Seek(0, io.SeekStart)
+			if e != nil {
+				return e
+			}
+			var reader io.Reader = bytesReader
+			if decoder != nil {
+				reader = transform.NewReader(bytesReader, decoder)
+			}
 			if e := unmarshal.Unmarshal(reader, data); e != nil {
 				return e
 			}
@@ -114,15 +125,7 @@ rootLoop:
 }
 
 // 打开zip，解码文件名，排序文件
-func GetDoc(r io.Reader, charsetName string) (*zip.Reader, error) {
-	if charsetName == "" {
-		charsetName = "utf-8"
-	}
-	// load Charset
-	encoding, _ := charset.Lookup(charsetName)
-	if encoding == nil {
-		return nil, errors.New("Charset " + charsetName + " not supported")
-	}
+func (m *Unmarshaler) GetDoc(r io.Reader) (*zip.Reader, error) {
 	// read content
 	bts, e := ioutil.ReadAll(r)
 	if e != nil {
@@ -138,9 +141,9 @@ func GetDoc(r io.Reader, charsetName string) (*zip.Reader, error) {
 		return nil, errors.New("no file found in zip")
 	}
 	// decode file name
-	if strings.ToLower(charsetName) != "utf-8" {
+	if m.charsetDecoder != nil {
 		for _, file := range reader.File {
-			file.Name, e = encoding.NewDecoder().String(file.Name)
+			file.Name, e = m.charsetDecoder.String(file.Name)
 			if e != nil {
 				return nil, e
 			}
@@ -154,7 +157,7 @@ func GetDoc(r io.Reader, charsetName string) (*zip.Reader, error) {
 	return reader, nil
 }
 
-func GetValue(doc *zip.File, path string) (string, error) {
+func (m *Unmarshaler) GetValue(doc *zip.File, path string) (string, error) {
 	switch path {
 	case "FileName":
 		return doc.Name, nil
@@ -168,4 +171,18 @@ func GetValue(doc *zip.File, path string) (string, error) {
 		return strconv.FormatUint(doc.UncompressedSize64, 10), nil
 	}
 	return "", nil
+}
+
+// 有很多压缩包，文件名和文件内容编码格式不一致，比如名称是GBK编码，内容是UTF-8编码
+// 先尝试从文件bom判断是否utf编码，如果文件内容不包含bom，则用指定的编码读取文件内容
+func (m *Unmarshaler) DetermineEncoding(r io.Reader) *encoding.Decoder {
+	bytes, err := bufio.NewReader(r).Peek(1024)
+	if err != nil {
+		panic(err)
+	}
+	_, name, _ := charset.DetermineEncoding(bytes, "")
+	if name != "utf-8" && m.charsetDecoder != nil {
+		return m.charsetDecoder
+	}
+	return nil
 }
