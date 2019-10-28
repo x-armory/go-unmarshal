@@ -18,7 +18,7 @@ var posPatternFindReg = regexp.MustCompile(" +pattern='([^']+)'")
 
 // 取值表达式索引，格式为：patternIdx='n[:g]'，n和g默认值都是0
 // n表示取匹配组中的第几个匹配值，默认0表示整个表达式匹配值
-// g表示取第几组匹配值，默认0表示取所有匹配组
+// g表示取第几组匹配值，索引从1开始，默认0表示取所有匹配组
 var posPatternIndexFindReg = regexp.MustCompile(" +patternIdx='((\\d+)([:]\\d+)?)'")
 var posPatternIndexSplitReg = regexp.MustCompile("\\d+")
 
@@ -191,10 +191,11 @@ func (tag *FieldTag) Parse(str string) (reflect.Value, error) {
 	if tag.Pattern != nil {
 		allStringSubmatch := tag.Pattern.FindAllStringSubmatch(str, -1)
 		str = ""
-		if len(allStringSubmatch) > 0 && len(allStringSubmatch) > tag.PatternGroupIdx {
-			if tag.PatternGroupIdx > 0 {
-				if len(allStringSubmatch[tag.PatternGroupIdx]) > tag.PatternIdx && allStringSubmatch[tag.PatternGroupIdx][0] != "" {
-					str = allStringSubmatch[tag.PatternGroupIdx][tag.PatternIdx]
+		groupIndex := tag.PatternGroupIdx - 1
+		if len(allStringSubmatch) > 0 && len(allStringSubmatch) > groupIndex {
+			if groupIndex >= 0 {
+				if len(allStringSubmatch[groupIndex]) > tag.PatternIdx && allStringSubmatch[groupIndex][0] != "" {
+					str = allStringSubmatch[groupIndex][tag.PatternIdx]
 				}
 			} else {
 				for t := range allStringSubmatch {
