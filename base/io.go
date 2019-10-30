@@ -28,7 +28,11 @@ func TransformReaderEncoding(r io.Reader, encoding encoding.Encoding) (err error
 		if e != nil {
 			return e, nil
 		}
-		bomBytes = contentBytes[0:1024]
+		if len(contentBytes) > 1024 {
+			bomBytes = contentBytes[0:1024]
+		} else {
+			bomBytes = contentBytes
+		}
 		r = bytes.NewReader(contentBytes)
 	}
 	_, name, _ := charset.DetermineEncoding(bomBytes, "")
