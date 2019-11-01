@@ -18,11 +18,12 @@ func TransformReaderEncoding(r io.Reader, encoding encoding.Encoding) (err error
 	var ri interface{} = r
 	if readerSeeker, ok := ri.(io.ReadSeeker); ok {
 		bomBytes, err = bufio.NewReaderSize(readerSeeker, 1024).Peek(1024)
-		if err != nil {
+		if len(bomBytes) > 0 {
+			readerSeeker.Seek(0, io.SeekStart)
+			r = readerSeeker
+		} else if err != nil {
 			return err, nil
 		}
-		readerSeeker.Seek(0, io.SeekStart)
-		r = readerSeeker
 	} else {
 		contentBytes, e := ioutil.ReadAll(r)
 		if e != nil {
